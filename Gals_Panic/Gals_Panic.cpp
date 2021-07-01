@@ -4,12 +4,35 @@
 #include "framework.h"
 #include "Gals_Panic.h"
 
+//custom
+#include <ObjIdl.h>
+#include <gdiplus.h>
+#pragma comment(lib, "Gdiplus.lib")
+#pragma comment(lib,"msimg32.lib")
+using namespace Gdiplus;
+
 #define MAX_LOADSTRING 100
 
 // 전역 변수:
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
+
+//custom
+HBITMAP hBackImage;
+BITMAP bitBack;
+
+RECT rectview;
+//GDI+
+ULONG_PTR g_GdiToken;
+
+//Function
+
+void CreateBitmap();
+void DrawBitmap(HWND hWnd, HDC hdc,RECT rectview);
+void DeleteBitmap();
+VOID changebitpixel(HDC hdc);
+void GDI_Init();
 
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -142,16 +165,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+	case WM_CREATE:
+	{
+		GDI_Init();
+		GetClientRect(hWnd, &rectview);
+		CreateBitmap();
+	}
+	break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
+
+//			DrawBitmap(hWnd, hdc, rectview);
+			changebitpixel(hdc);
+
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
-        PostQuitMessage(0);
+	{
+		DeleteBitmap();
+		PostQuitMessage(0);
+	}
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
@@ -177,4 +214,59 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
     return (INT_PTR)FALSE;
+}
+void CreateBitmap()
+{
+	hBackImage = (HBITMAP)LoadImage(NULL, TEXT("images/random2.bmp"),
+		IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
+	GetObject(hBackImage, sizeof(BITMAP), &bitBack);
+
+}
+
+void DrawBitmap(HWND hWnd, HDC hdc, RECT rectview)
+{
+	HDC hMemDC;
+	HBITMAP hOldBitmap;
+	int bx = rectview.right, by = rectview.bottom;
+
+	hMemDC = CreateCompatibleDC(hdc);
+	hOldBitmap = (HBITMAP)SelectObject(hMemDC, hBackImage);
+
+
+	BitBlt(hdc, 0, 0, bx, by, hMemDC, 0, 0, SRCCOPY);
+
+	SelectObject(hMemDC, hOldBitmap);
+
+	DeleteDC(hMemDC);
+}
+void GDI_Init()
+{
+	GdiplusStartupInput gpsi;
+	GdiplusStartup(&g_GdiToken, &gpsi, NULL);
+}
+void DeleteBitmap()
+{
+	DeleteObject(hBackImage);
+}
+
+VOID changebitpixel(HDC hdc)
+{
+	Bitmap myBitmap((WCHAR *)L"images/random2.bmp");
+	Graphics graphics(hdc);
+	int bx = rectview.right, by = rectview.bottom;
+
+
+	graphics.DrawImage(&myBitmap, 0, 0);	
+	
+
+	for (UINT row = 0; row < myBitmap.GetWidth(); row += 2)
+	{
+		for (UINT col = 0; col < myBitmap.GetHeight(); col += 2)
+			myBitmap.SetPixel(row, col, Color(255, 0, 0, 0));
+	}
+
+
+	graphics.DrawImage(&myBitmap,
+		500, 0);
+	
 }
