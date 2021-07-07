@@ -2,14 +2,10 @@
 //
 
 #include "framework.h"
-#include "Gals_Panic.h"
+#include "GP.h"
 
-//custom
-#include <ObjIdl.h>
-#include <gdiplus.h>
-#pragma comment(lib, "Gdiplus.lib")
-#pragma comment(lib,"msimg32.lib")
-using namespace Gdiplus;
+
+#define WS_GAME (WS_MAXIMIZE | WS_BORDER | WS_POPUP | WS_SYSMENU)
 
 #define MAX_LOADSTRING 100
 
@@ -18,21 +14,16 @@ HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 
-//custom
-HBITMAP hBackImage;
-BITMAP bitBack;
 
+//custom
+GP g;
 RECT rectview;
+BOOL flag = true;
 //GDI+
-ULONG_PTR g_GdiToken;
 
 //Function
-
-void CreateBitmap();
-void DrawBitmap(HWND hWnd, HDC hdc,RECT rectview);
-void DeleteBitmap();
-VOID changebitpixel(HDC hdc);
-void GDI_Init();
+VOID CALLBACK AniProc(HWND hWnd, UINT uMsg,
+	UINT idEvent, DWORD dwTime);
 
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -41,41 +32,62 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR    lpCmdLine,
+	_In_ int       nCmdShow)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	g.GDI_Init();
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: 여기에 코드를 입력합니다.
+	// TODO: 여기에 코드를 입력합니다.
 
-    // 전역 문자열을 초기화합니다.
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_GALSPANIC, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+	// 전역 문자열을 초기화합니다.
+	LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+	LoadStringW(hInstance, IDC_GALSPANIC, szWindowClass, MAX_LOADSTRING);
+	MyRegisterClass(hInstance);
 
-    // 애플리케이션 초기화를 수행합니다:
-    if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_GALSPANIC));
+	// 애플리케이션 초기화를 수행합니다:
+	if (!InitInstance(hInstance, nCmdShow))
+	{
+		return FALSE;
+	}
 
-    MSG msg;
+	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_GALSPANIC));
 
-    // 기본 메시지 루프입니다:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+	MSG msg;
 
-    return (int) msg.wParam;
+	// 기본 메시지 루프입니다:
+	//while (GetMessage(&msg, nullptr, 0, 0))
+	//{
+	//	if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+	//	{
+	//		TranslateMessage(&msg);
+	//		DispatchMessage(&msg);
+	//	}
+	//}
+
+	while (true) {
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			if(!g.gtime)
+				g.movePointer();
+
+			if (msg.message == WM_QUIT) {
+				break;
+			}
+			else {
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
+		}
+		else
+		{
+
+		}
+		
+	}
+	return (int)msg.wParam;
 }
 
 
@@ -120,8 +132,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+   HWND hWnd = CreateWindow(szWindowClass, TEXT("Gals_Panic"), WS_GAME,
+	   0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN), nullptr, nullptr, hInstance, nullptr);
+
 
    if (!hWnd)
    {
@@ -146,6 +159,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+
     switch (message)
     {
     case WM_COMMAND:
@@ -167,26 +181,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 	case WM_CREATE:
 	{
-		GDI_Init();
-		GetClientRect(hWnd, &rectview);
-		CreateBitmap();
+		GetClientRect(hWnd, &rectview);	
+		g.set();
+		SetTimer(hWnd, 1, 10, NULL);
 	}
 	break;
-    case WM_PAINT:
+	case WM_TIMER:
+	{
+		g.gtime = false;
+		InvalidateRect(hWnd, NULL, false);
+	}
+	case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
+			HDC hdc = BeginPaint(hWnd, &ps);
+			// TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
+			if (flag)
+			{
+				g.Double_buffer(hWnd, hdc, 0, 0, 1920, 1200);
+				g.DrawPointer(hWnd, hdc);
+				flag = false;
+			}
+			
+	
+			g.DrawPointer(hWnd, hdc);
 
-//			DrawBitmap(hWnd, hdc, rectview);
-			changebitpixel(hdc);
 
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
 	{
-		DeleteBitmap();
+//		KillTimer(hWnd, 1);
 		PostQuitMessage(0);
 	}
         break;
@@ -215,58 +241,12 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
-void CreateBitmap()
+VOID CALLBACK AniProc(HWND hWnd, UINT uMsg,
+	UINT idEvent, DWORD dwTime)
 {
-	hBackImage = (HBITMAP)LoadImage(NULL, TEXT("images/random2.bmp"),
-		IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
-	GetObject(hBackImage, sizeof(BITMAP), &bitBack);
-
-}
-
-void DrawBitmap(HWND hWnd, HDC hdc, RECT rectview)
-{
-	HDC hMemDC;
-	HBITMAP hOldBitmap;
-	int bx = rectview.right, by = rectview.bottom;
-
-	hMemDC = CreateCompatibleDC(hdc);
-	hOldBitmap = (HBITMAP)SelectObject(hMemDC, hBackImage);
-
-
-	BitBlt(hdc, 0, 0, bx, by, hMemDC, 0, 0, SRCCOPY);
-
-	SelectObject(hMemDC, hOldBitmap);
-
-	DeleteDC(hMemDC);
-}
-void GDI_Init()
-{
-	GdiplusStartupInput gpsi;
-	GdiplusStartup(&g_GdiToken, &gpsi, NULL);
-}
-void DeleteBitmap()
-{
-	DeleteObject(hBackImage);
-}
-
-VOID changebitpixel(HDC hdc)
-{
-	Bitmap myBitmap((WCHAR *)L"images/random2.bmp");
-	Graphics graphics(hdc);
-	int bx = rectview.right, by = rectview.bottom;
-
-
-	graphics.DrawImage(&myBitmap, 0, 0);	
-	
-
-	for (UINT row = 0; row < myBitmap.GetWidth(); row += 2)
-	{
-		for (UINT col = 0; col < myBitmap.GetHeight(); col += 2)
-			myBitmap.SetPixel(row, col, Color(255, 0, 0, 0));
-	}
-
-
-	graphics.DrawImage(&myBitmap,
-		500, 0);
-	
+	PAINTSTRUCT ps;
+	HDC hdc = BeginPaint(hWnd, &ps);
+	g.DrawPointer(hWnd, hdc);
+	InvalidateRect(hWnd, NULL, false);
+	EndPaint(hWnd, &ps);
 }
