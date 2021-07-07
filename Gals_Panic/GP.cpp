@@ -1,6 +1,8 @@
 #include "GP.h"
 #include "framework.h"
 
+bool operator!=(const POINTF a,const POINTF b);
+
 GP::~GP()
 {
 	GdiplusShutdown(g_GdiToken);
@@ -175,17 +177,40 @@ void GP::movePointer()
 		pointer.y += 1;
 	}
 
-	if (arr[int(pointer.x)][int(pointer.y)] != 2)
+	if (arr[int(pointer.x)][int(pointer.y)] != 2 || SPACE)
 	{
-		if ((GetAsyncKeyState(VK_SPACE) & 0x8000))
+		if ((GetAsyncKeyState(VK_SPACE) & 0x8000) && (pointer != preP)) // 스페이스
 		{
+			if (arr[int(pointer.x)][int(pointer.y)] != 0 && preV.size() == 0)
+			{
+				pointer = preP;
+				return;
+			}
 			SPACE = true;
+
+			if (arr[int(pointer.x)][int(pointer.y)] == 2)
+			{
+				get_space();
+				make_Surface();
+				flag = true;
+				SPACE = false;
+				return;
+			}
+
+
+
+
 			if(arr[int(pointer.x)][int(pointer.y)] != 0)
 				pointer = preP;
 			else
 			{
-				preV.push_back(pointer);
+				if (preV.size() == 0)
+				{
+					arr[int(preP.x)][int(preP.y)] = 3;
+					preV.push_back(preP);
+				}
 				arr[int(pointer.x)][int(pointer.y)] = 3;
+				preV.push_back(pointer);
 			}
 		}
 		else
@@ -196,28 +221,37 @@ void GP::movePointer()
 				pointer = preV.back();
 				preV.erase(preV.begin() + preV.size() - 1, preV.end());
 			}
+			else
+			{
+				pointer = preP;
+				SPACE = false;
+			}
 
 			preP = pointer;
 		}
 
+	}
+	else if(arr[int(pointer.x)][int(pointer.y)] != 2)
+	{
+		pointer = preP;
 	}
 
 }
 
 void GP::make_Surface()
 {
-	for (int i = 0; i < rectview.right; i++)
+	for (int i = 0; i < 1918; i++)
 	{
-		for (int j = 0; j < rectview.bottom; j++)
+		for (int j = 0; j < 1058; j++)
 		{
 			if (arr[i][j] == 2)
 				arr[i][j] = 1;
 		}
 	}
 	bool flag = true;
-	for (int i = 0; i < rectview.right; i++)
+	for (int i = 0; i < 1918; i++)
 	{
-		for (int j = 0; j < rectview.bottom; j++)
+		for (int j = 1; j < 1058; j++)
 		{
 			if (flag)
 			{
@@ -238,9 +272,9 @@ void GP::make_Surface()
 		}
 	}
 	flag = true;
-	for (int i = 0; i < rectview.bottom; i++)
+	for (int i = 0; i < 1058; i++)
 	{
-		for (int j = 0; j < rectview.right; j++)
+		for (int j = 1; j < 1918; j++)
 		{
 			if (flag)
 			{
@@ -263,3 +297,113 @@ void GP::make_Surface()
 
 }
 
+void GP::get_space()
+{
+	const int dir[8][2] = { {1,1},{1,0}, {1,-1}, {0,-1}, {-1,-1}, {-1,0}, {-1,1}, {0,1} };
+
+	POINTF stand;
+
+	for (int i = 0; i < 8; i++)
+	{
+		if ((arr[int(preV[0].x) + dir[i][0]][int(preV[0].y) + dir[i][1]] == 1 &&
+			arr[int(preV[0].x) + dir[i][0]][int(preV[0].y) + dir[i][1]] == 2 &&
+			arr[int(preV[0].x) + dir[i][0]][int(preV[0].y) + dir[i][1]] == 3))
+		{
+			stand.x = preV[0].x + dir[i][0];
+			stand.y = preV[0].y + dir[i][1];
+			break;
+		}
+	}
+
+
+
+
+
+
+
+
+	for (int i = 0; i < rectview.right; i++)
+	{
+		for (int j = 0; j < rectview.bottom; j++)
+		{
+			if (arr[i][j] == 3 || arr[i][j] == 2)
+				arr[i][j] = 1;
+		}
+	}
+
+
+	//
+	//for (int i = 0; i < preV.size(); i++)
+	//{
+	//	int j = preV[i].x;
+	//	for (int k = preV[i].x + 1; k < rectview.right; k++)
+	//	{
+	//		if (arr[k][int(preV[i].y)] == 1)
+	//		{
+	//			j = k;
+	//			break;
+	//		}
+	//	}
+
+	//	for (int k = preV[i].x + 1; k < j; k++)
+	//	{
+	//		arr[k][int(preV[i].y)] = 1;
+	//	}
+
+	//	j = preV[i].x;
+	//	for (int k = preV[i].x - 1; k > 0; k--)
+	//	{
+	//		if (arr[k][int(preV[i].y)] == 1)
+	//		{
+	//			j = k;
+	//			break;
+	//		}
+	//	}
+
+	//	for (int k = preV[i].x - 1; k > j; k--)
+	//	{
+	//		arr[k][int(preV[i].y)] = 1;
+	//	}
+	//}
+
+
+
+}
+
+RECT GP::getrect()
+{
+	LONG MAXX = LONG(preV[0].x), MINX = LONG(preV[0].x), MAXY = LONG(preV[0].x), MINY = LONG(preV[0].x);
+
+	for(int i = 1; i < preV.size(); i++)
+	{
+		if (preV[i].x > MAXX)
+			MAXX = preV[i].x;
+
+		if (preV[i].x < MINX)
+			MAXX = preV[i].x;
+
+		if (preV[i].y > MAXY)
+			MAXX = preV[i].y;
+
+		if (preV[i].y < MINY)
+			MAXX = preV[i].y;
+
+	}
+
+	RECT r = { MINX, MINY, MAXX, MAXY };
+
+	return r;
+}
+
+void GP::BFS()
+{
+
+}
+
+bool operator!=(const POINTF a, const POINTF b)
+{
+	if (a.x == b.x && a.y == b.y)
+		return false;
+	else
+		return true;
+}

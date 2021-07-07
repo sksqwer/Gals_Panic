@@ -202,6 +202,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				g.DrawPointer(hWnd, hdc);
 				flag = false;
 			}
+
+			if (g.flag)
+			{
+				g.flag = false;
+				RECT R = g.getrect();
+				g.Double_buffer(hWnd, hdc, 0, 0, 1920, 1200);
+//				g.Double_buffer(hWnd, hdc, R.left, R.top, R.right - R.left, R.bottom - R.top);
+				g.getV().clear();
+
+			}
 			
 	
 			g.DrawPointer(hWnd, hdc);

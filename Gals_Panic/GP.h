@@ -18,6 +18,7 @@ private:
 public:
 	BOOL gtime = true;
 	BOOL SPACE = false;
+	BOOL flag = false;
 	GP() {}
 	~GP();
 	std::vector<POINTF> &getV() { return preV; }
@@ -34,5 +35,8 @@ public:
 	void DrawPointer(HWND hWnd, HDC hdc);
 	void movePointer();
 	void make_Surface();
+	void get_space();
+	RECT getrect();
+	void BFS();
 };
 #endif // !GALSPANIC_H_
