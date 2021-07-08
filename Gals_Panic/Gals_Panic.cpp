@@ -70,8 +70,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	while (true) {
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			if(!g.gtime)
-				g.movePointer();
+			if (!g.gtime)
+			{
+				g.update();
+
+			}
 
 			if (msg.message == WM_QUIT) {
 				break;
@@ -188,6 +191,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	break;
 	case WM_TIMER:
 	{
+		g.CollisionWall();
 		g.gtime = false;
 		InvalidateRect(hWnd, NULL, false);
 	}
@@ -198,7 +202,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			// TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
 			if (flag)
 			{
-				g.Double_buffer(hWnd, hdc, 0, 0, 1920, 1200);
+				g.Double_buffer(hWnd, hdc, 0, 0, 800, 800);
 				g.DrawPointer(hWnd, hdc);
 				flag = false;
 			}
@@ -206,14 +210,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (g.flag)
 			{
 				g.flag = false;
-				RECT R = g.getrect();
-				g.Double_buffer(hWnd, hdc, 0, 0, 1920, 1200);
+				RECT R = g.getmaxrect();
+				g.Double_buffer(hWnd, hdc, 0, 0, 800, 800);
 //				g.Double_buffer(hWnd, hdc, R.left, R.top, R.right - R.left, R.bottom - R.top);
 				g.getV().clear();
 
 			}
 			
-	
 			g.DrawPointer(hWnd, hdc);
 
 

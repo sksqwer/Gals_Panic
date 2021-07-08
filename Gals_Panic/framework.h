@@ -22,3 +22,4 @@
 using namespace Gdiplus;
 #include <ocidl.h>
 #include <vector>
+#include <ctime>
