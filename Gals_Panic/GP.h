@@ -26,6 +26,7 @@ private:
 	RECT maxrect = { width, height, 0, 0};
 	HBITMAP pImage, cImage;
 	BITMAP pBit, cBit;
+	Bitmap *myBitmap, *myBitmap2;
 public:
 	Boss b;
 	BOOL gtime = true;
@@ -51,7 +52,9 @@ public:
 	void make_Surface();
 	void get_space();
 	void getrect();
+	RECT getVrect();
 	void change_maxrect();
+	bool on_vector_line(FLOAT a, FLOAT b);
 	void BFS(POINTF p);
 	bool check_inner_point(POINTF p);
 

@@ -11,6 +11,9 @@ GP::~GP()
 		delete[] arr[i];
 
 	delete[] arr;
+
+	delete myBitmap;
+	delete myBitmap2;
 }
 
 void GP::set()
@@ -33,6 +36,10 @@ void GP::set()
 	cImage = (HBITMAP)LoadImage(NULL, TEXT("images/cover.bmp"),
 		IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
 	GetObject(pImage, sizeof(BITMAP), &cBit);
+
+
+	myBitmap = new Bitmap((WCHAR *)L"images/random.bmp");
+	myBitmap2 = new Bitmap((WCHAR *)L"images/cover.bmp");
 
 	make_space();
 	getrect();
@@ -80,9 +87,8 @@ void GP::Double_buffer(HWND hWnd, HDC hdc, int x, int y, int width, int height)
 	Gdiplus::Graphics graphics(memDC2);
 
 
-	Bitmap myBitmap((WCHAR *)L"images/random.bmp");
-	set_image(myBitmap);
-	graphics.DrawImage(&myBitmap, 0, 0);
+	set_image(*myBitmap);
+	graphics.DrawImage(myBitmap, 0, 0);
 
 	BitBlt(memDC, x, y, bx, by, memDC2, x, y, SRCCOPY);
 	SelectObject(memDC2, old2);
@@ -91,9 +97,8 @@ void GP::Double_buffer(HWND hWnd, HDC hdc, int x, int y, int width, int height)
 	memDC2 = CreateCompatibleDC(memDC);
 	old2 = (HBITMAP)SelectObject(memDC2, hImage2);
 	Gdiplus::Graphics graphics2(memDC2);
-	Bitmap myBitmap2((WCHAR *)L"images/cover.bmp");
-	changebitpixel(myBitmap2);
-	graphics2.DrawImage(&myBitmap2, 0, 0);
+	changebitpixel(*myBitmap2);
+	graphics2.DrawImage(myBitmap2, 0, 0);
 
 	BitBlt(memDC, x, y, bx, by, memDC2, x, y, SRCCOPY);
 	SelectObject(memDC2, old2);
@@ -126,6 +131,8 @@ void GP::changebitpixel(Bitmap &myBitmap)
 	{
 		for (UINT col = 0; col < by; col++)
 		{
+//			Color a;
+//			myBitmap.GetPixel(row, col, &a); a.GetA() != 0 &&
 			if(arr[row][col] == 1 || arr[row][col] == 2)
 				myBitmap.SetPixel(row, col, Color(0, 0, 0, 0));
 			else if(arr[row][col] == 3)
@@ -580,21 +587,13 @@ void GP::get_space()
 
 	BFS(stand);*/
 
-	for (int i = 0; i < rectview.right; i++)
-	{
-		for (int j = 0; j < rectview.bottom; j++)
-		{
-			if (arr[i][j] == 3 || arr[i][j] == 2)
-				arr[i][j] = 1;
-		}
-	}
 
-	change_maxrect();
+	RECT R = getVrect();
 
 	POINTF temp;
-	for (int i = maxrect.left; i <= maxrect.right; i++)
+	for (int i = R.left; i <= R.right; i++)
 	{
-		for (int j = maxrect.top; j <= maxrect.bottom; j++)
+		for (int j = R.top; j <= R.bottom; j++)
 		{
 			temp.x = i;
 			temp.y = j;
@@ -604,6 +603,14 @@ void GP::get_space()
 	}
 
 
+	for (int i = 0; i < rectview.right; i++)
+	{
+		for (int j = 0; j < rectview.bottom; j++)
+		{
+			if (arr[i][j] == 3 || arr[i][j] == 2)
+				arr[i][j] = 1;
+		}
+	}
 
 	/*
 	for (int i = 0; i < preV.size(); i++)
@@ -677,6 +684,39 @@ void GP::getrect()
 
 }
 
+RECT GP::getVrect()
+{
+	LONG MAXX = maxrect.right, MINX = maxrect.left, MAXY = maxrect.bottom, MINY = maxrect.top;
+	RECT R;
+	for (int i = 0; i < preV.size(); i++)
+	{
+		int n = arr[int(preV[i].x)][int(preV[i].y)];
+		if (n == 3)
+		{
+			if (int(preV[i].x) > MAXX)
+				MAXX = int(preV[i].x);
+
+			if (int(preV[i].x) < MINX)
+				MINX = int(preV[i].x);
+
+			if (int(preV[i].y) > MAXY)
+				MAXY = int(preV[i].y);
+
+			if (int(preV[i].y) < MINY)
+				MINY = int(preV[i].y);
+
+		}
+
+	}
+	R.left = MINX;
+	R.right = MAXX;
+	R.bottom = MAXY;
+	R.top = MINY;
+
+	return R;
+
+}
+
 void GP::change_maxrect()
 {
 	LONG MAXX = maxrect.right, MINX = maxrect.left, MAXY = maxrect.bottom, MINY = maxrect.top;
@@ -705,6 +745,19 @@ void GP::change_maxrect()
 	maxrect.right = MAXX;
 	maxrect.bottom = MAXY;
 	maxrect.top = MINY;
+}
+
+bool GP::on_vector_line(FLOAT a, FLOAT b)
+{
+	POINTF p = { a, b };
+	int len1 = sqrt(pow(preV[0].x - p.x, 2) + pow(preV[0].y - p.y, 2));
+	int len2 = sqrt(pow(preV[preV.size() - 1].x - p.x, 2) + pow(preV[preV.size() - 1].y - p.y, 2));
+	int sumlen = sqrt(pow(preV[preV.size() - 1].x - preV[0].x, 2) + pow(preV[preV.size() - 1].y - preV[0].y, 2));
+
+	if (len1 + len2 == sumlen)
+		return true;
+	else
+		return false;
 }
 
 
@@ -738,47 +791,57 @@ void GP::BFS(POINTF p)
 
 bool GP::check_inner_point(POINTF stand)
 {
+	int num = 0;
 	if (arr[int(stand.x)][int(stand.y)] != 0)
 		return false;
 	bool ch = false;
 
 	for (int j = stand.x + 1; j < rectview.right; j++)
-		if (arr[j][int(stand.y)] != 0)
+		if (arr[j][int(stand.y)] == 3 || on_vector_line(j, stand.y))
 		{
-			ch = true;
-			continue;
+			num++;
 		}
+	if (num % 2 == 1)
+		ch = true;
 
+
+
+	num = 0;
 	if (ch)
 	{
 		ch = false;
 		for (int j = stand.x - 1; j > 0; j--)
-			if (arr[j][int(stand.y)] != 0)
+			if (arr[j][int(stand.y)] == 3 || on_vector_line(j, stand.y) )
 			{
-				ch = true;
-				continue;
+				num++;
 			}
 	}
+	if (num % 2 == 1)
+		ch = true;
+	num = 0;
 	if (ch)
 	{
 		ch = false;
 		for (int j = stand.y + 1; j < rectview.bottom; j++)
-			if (arr[int(stand.x)][j] != 0)
+			if (arr[int(stand.x)][j] == 3 || on_vector_line(stand.x, j) )
 			{
-				ch = true;
-				continue;
+				num++;
 			}
 	}
+	if (num % 2 == 1)
+		ch = true;
+	num = 0;
 	if (ch)
 	{
 		ch = false;
 		for (int j = stand.y - 1; j > 0; j--)
-			if (arr[int(stand.x)][j] != 0)
+			if (arr[int(stand.x)][j] == 3 || on_vector_line(stand.x, j) )
 			{
-				ch = true;
-				continue;
+				num++;
 			}
 	}
+	if (num % 2 == 1)
+		ch = true;
 	if (ch)
 	{
 		return true;
@@ -903,57 +966,73 @@ bool GP::CollisionWall()
 
 	//if (ch)
 	//	return true;
-
-	for (int i = 0; i < width; i++)
+	int mini = 987654321, minj = 987654321, minlen = 987654321;
+	for (int i = b.x - b.R; i <= b.x + b.R; i++)
 	{
-		for (int j = 0; j < height; j++)
+		for (int j = b.y - b.R; j <= b.y + b.R; j++)
 		{
-			if (arr[i][j] == 1)
+			if (arr[i][j] == 1 || arr[i][j] == 2)
 			{
-				if (sqrt(pow((int)pointer.x - i, 2) + pow((int)pointer.y - j, 2) <= b.R))
+				FLOAT np = sqrt(pow((int)b.x - i, 2) + pow((int)b.y - j, 2));
+				if (np <= b.R)
 				{
-					FLOAT nx = pointer.x - i, ny = pointer.y - j;
-					change_vector(nx, ny);
-
-					return true;
+					if (minlen > np)
+					{
+						minlen = np;
+						mini = i;
+						minj = j;
+					}
 				}
 			}
 		}
+	}
+
+	if (mini == 987654321 || minj == 987654321)
+		return false;
+	else
+	{
+		FLOAT np = sqrt(pow((int)b.x - mini, 2) + pow((int)b.y - minj, 2));
+		FLOAT nx = b.x - mini, ny = b.y - minj;
+		nx /= np;
+		ny /= np;
+		change_vector(nx, ny);
+
+		b.x = mini + (b.R) * nx;
+		b.y = minj + (b.R) * ny;
+
+		return true;
 	}
 
 }
 
 void GP::CollisionPointer()
 {
-
+	  
 }
 
 void GP::change_vector(FLOAT nx, FLOAT ny)
 {
-	nx /= b.R;
-	ny /= b.R;
-
-	FLOAT tx = -nx, ty = ny;
+	FLOAT tx = -1 * ny, ty = nx;
 
 	FLOAT innern = b.vx*nx + b.vy*ny;
 	FLOAT innert = b.vx*tx + b.vy*ty;
 
-	b.vx = nx * -innern + tx * innert;
-	b.vy = ny * -innern + ty * innert;
+	b.vx = nx * abs(innern) + tx * innert;
+	b.vy = ny * abs(innern) + ty * innert;
 
-	FLOAT bp = sqrt(pow(b.vx, 2) + pow(b.vy, 2));
-	b.vx /= bp;
-	b.vy /= bp;
-	b.vx *= b.velocity;
-	b.vy *= b.velocity;
+	//FLOAT bp = sqrt(pow(b.vx, 2) + pow(b.vy, 2));
 
+	//b.vx /= bp;
+	//b.vy /= bp;
+	//b.vx *= b.velocity;
+	//b.vy *= b.velocity;
 
 }
 
 void GP::update()
 {
-	movePointer();
 	CollisionWall();
+	movePointer();
 	b.x += b.vx;
 	b.y += b.vy; 
 
